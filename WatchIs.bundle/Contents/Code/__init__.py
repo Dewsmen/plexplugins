@@ -7,19 +7,20 @@
 #
 ###################################################################################
 
-WATCHIS_URL = 'http://watch.is'
-WATCHIS_VIDEOS = '%s/api/?genre=%%d&page=%%d' % WATCHIS_URL
-WATCHIS_BOOKMARKS = '%s/api/bookmarks?page=%%d' % WATCHIS_URL
-WATCHIS_TOP = '%s/api/top' % WATCHIS_URL
-WATCHIS_GENRES = '%s/api/genres' % WATCHIS_URL
-WATCHIS_SEARCH = '%s/api/?search=%%s&page=%%d' % WATCHIS_URL
-WATCHIS_LOGIN = '%s/api/?username=%%s&password=%%s' % WATCHIS_URL
+WATCHIS_URL			= 'http://watch.is'
+WATCHIS_VIDEOS		= '%s/api/?genre=%%d&page=%%d' % WATCHIS_URL
+WATCHIS_BOOKMARKS	= '%s/api/bookmarks?page=%%d' % WATCHIS_URL
+WATCHIS_TOP			= '%s/api/top' % WATCHIS_URL
+WATCHIS_GENRES		= '%s/api/genres' % WATCHIS_URL
+WATCHIS_SEARCH		= '%s/api/?search=%%s&page=%%d' % WATCHIS_URL
+WATCHIS_LOGIN		= '%s/api/?username=%%s&password=%%s' % WATCHIS_URL
 
-ICON = 'icon-default.png'
-ART = 'art-default.jpg'
-ICON = 'icon-default.png'
-PREFS = 'icon-prefs.png'
-SEARCH = 'icon-search.png'
+
+ICON 				= 'icon-default.png'
+ART 				= 'art-default.jpg'
+ICON 				= 'icon-default.png'
+PREFS 				= 'icon-prefs.png'
+SEARCH 				= 'icon-search.png'
 
 ####################################################################################################
 def Start():
@@ -42,14 +43,14 @@ def Start():
 
 ####################################################################################################
 def ValidatePrefs():
-	HTTP.ClearCookies()
-	HTTP.ClearCache()
+	# Dewsmen 11/13/2014: clear cache and cookie moved to Login()
+	#HTTP.ClearCookies()
+	#HTTP.ClearCache()
 	Login()
 
 ####################################################################################################
 @handler('/video/watchis', 'WatchIs', thumb=ICON, art=ART)
 def MainMenu():
-
 	oc = ObjectContainer(
 		view_group = 'InfoList',
 		objects = [
@@ -110,7 +111,8 @@ def Search(query, title, url, page=0, cacheTime=1):
 def Genres(title, url):
 	oc = ObjectContainer(title2=unicode(title), view_group='List')
 
-	xml = XML.ElementFromURL(url, cacheTime=CACHE_1WEEK)
+	# Dewsmen 11/13/2014: some OSs and browsers doesn't allow cookie, so add them manually
+	xml = XML.ElementFromURL(url, cacheTime=CACHE_1WEEK, headers = Dict['Cookie'])
 	errorOC = CheckError(xml)
 	if errorOC:
 		return errorOC
@@ -147,8 +149,9 @@ def GetBookmarks(title, url, page=0, cacheTime=0):
 
 ####################################################################################################
 @route('/video/watchis/videos', genre=int, page=int, cacheTime=int, allow_sync=True)
-def GetVideos(title, url, genre=0, page=0, cacheTime=CACHE_1HOUR):
-	oc, nextPage = GetVideosUrl(title, url % (genre, page), cacheTime)
+def GetVideos(title, url=WATCHIS_VIDEOS, genre=0, page=0, cacheTime=CACHE_1HOUR):
+	oc, nextPage = GetVideosUrl(title, url%(genre, page), cacheTime)
+
 	if oc.header == unicode(L('Error')):
 		return oc
 	# It appears that sometimes we expect another page, but there ends up being no valid videos available
@@ -170,18 +173,21 @@ def GetVideosTop(title, url, cacheTime=CACHE_1HOUR):
 def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 	oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
 
-	xml = XML.ElementFromURL(url, cacheTime=cacheTime)
+	xml = XML.ElementFromURL(url, cacheTime=cacheTime, headers = Dict['Cookie'])
 	total = xml.get("total")
 	if total:
 		total = int(xml.get("total"))
 		page = int(xml.get("page"))
 		pageSize = int(xml.get("pageSize"))
 		nextPage = True if total > (page*pageSize+pageSize) else False
+		if total == 0:
+			return oc, nextPage
 	else:
 		nextPage = False
-
-	if total and total == '0':
-		return oc, nextPage
+		
+	#Dewsmen 11/13/2014: Doesn't work if total is 0, moved into prev if statement
+	#if total and total == '0':
+	#	return oc, nextPage
 
 	errorOC = CheckError(xml)
 	if errorOC:
@@ -206,7 +212,7 @@ def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 					url = '%s/api/watch/%s' % (WATCHIS_URL, video_id)
 					posterUrl = '%s/posters/%s.jpg' % (WATCHIS_URL, video_id)
 
-					descXml = XML.ElementFromURL(url, cacheTime=cacheTime)
+					descXml = XML.ElementFromURL(url, cacheTime=cacheTime, headers = Dict['Cookie'])
 					errorOC = CheckError(xml)
 					if errorOC:
 						return
@@ -252,14 +258,14 @@ def PutNextPage(objCont, cbKey):
 def CheckError(xml):
 	# See if we have any creds stored
 	if not Prefs['username'] or not Prefs['password']:
-		return ObjectContainer(header=unicode(L('Error')), message=unicode(L('Please enter your email and password in the preferences.')))
+		return ObjectContainer(header=unicode(L('Error')), message=unicode(L('Please enter your email and password in the preferences')))
 
 	errorText = xml.xpath('//error/text()')
 	if errorText:
 		if errorText[0] == 'Access Denied':
-			return ObjectContainer(header=unicode(L('Error')), message=unicode(L('Please enter your correct email and password in the preferences.')))
+			return ObjectContainer(header=unicode(L(errorText[0])), message=unicode(L('Please enter your correct email and password in the preferences')))
 		if errorText[0] == 'Search Error':
-			return ObjectContainer(header=unicode(L('Error')), message=unicode(L('Search error.')))
+			return ObjectContainer(header=unicode(L(errorText[0])), message=unicode(L('Search error')))
 		return ObjectContainer(header=unicode(L('Error')), message=unicode(errorText[0]))
 
 	return None
@@ -267,12 +273,26 @@ def CheckError(xml):
 ####################################################################################################
 def Login():
 	Log(' --> Trying to log in')
+	# Dewsmen 11/13/2014:in some case get error 'OSError: Directory is not empty'
+	try: 
+		HTTP.ClearCache()
+	except:
+		Log ("Can't clear cache, please clean it manually")
+	
+	HTTP.ClearCookies()
 
 	url = WATCHIS_LOGIN % (Prefs['username'], Prefs['password'])
-	login = HTTP.Request(url).content
+
+	# Dewsmen 11/13/2014: don't need any response body on login, so change it from GET to HEAD
+	#disabled cache for login 
+	login = HTTP.Request(url, headers = {'Method': 'HEAD'}, cacheTime=0).headers
+
+	# Dewsmen 11/13/2014: some OSs(found in FreeBSD) don't save cookies, so store and add them manually
+	Dict['Cookie'] = {'Cookie':HTTP.CookiesForURL(WATCHIS_URL + "/api/")}
 
 ####################################################################################################
 def TimeToMs(timecode):
 	duration = timecode[ : -7]
 	seconds = int(duration) * 60
 	return seconds * 1000
+
