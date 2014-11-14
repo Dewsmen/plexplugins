@@ -20,5 +20,6 @@
   "Search error": "Search error",
   "Please enter your email and password in the preferences": "Please enter your email and password in the preferences",
   "Please enter your correct email and password in the preferences": "Please enter your correct email and password in the preferences",
-  "Access Denied":"Access Denied"
+  "Access Denied":"Access Denied",
+  "Unexpected response from the Server. Please try later.": "Unexpected response from the Server. Please try later."
 }

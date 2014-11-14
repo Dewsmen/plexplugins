@@ -20,5 +20,6 @@
   "Search error": "Во время операции поиска произошла ошибка",
   "Please enter your email and password in the preferences": "Введите ваш логин и пароль в настройках",
   "Please enter your correct email and password in the preferences": "Введите корректный логин и пароль в настройках",
-  "Access Denied":"Отказано в доступе"
+  "Access Denied":"Отказано в доступе",
+  "Unexpected response from the Server. Please try later.": "Неожиданный ответ от сервера. Попробуйте позже."
 }
