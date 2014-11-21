@@ -14,6 +14,7 @@ WATCHIS_TOP			= '%s/api/top' % WATCHIS_URL
 WATCHIS_GENRES		= '%s/api/genres' % WATCHIS_URL
 WATCHIS_SEARCH		= '%s/api/?search=%%s&page=%%d' % WATCHIS_URL
 WATCHIS_LOGIN		= '%s/api/?username=%%s&password=%%s' % WATCHIS_URL
+WATCHIS_SESSION_EXP	= 7
 
 
 ICON 				= 'icon-default.png'
@@ -41,7 +42,6 @@ def Start():
 	InputDirectoryObject.art = R(ART)
 
 	HTTP.CacheTime = CACHE_1HOUR
-
 ####################################################################################################
 def ValidatePrefs():
 	# Dewsmen 11/13/2014:in some case get error 'OSError: Directory is not empty'
@@ -327,6 +327,9 @@ def Login():
 	Log(' --> Trying to log in')	
 	HTTP.ClearCookies()
 
+	# Dewsmen 11/21/2014 Reset Dict with cookie and session_start
+	Dict.Reset()
+
 	url = WATCHIS_LOGIN % (Prefs['username'], Prefs['password'])
 
 	# Dewsmen 11/13/2014: don't need any response body on login, so change it from GET to HEAD
@@ -338,11 +341,27 @@ def Login():
 	# Dewsmen 11/13/2014: some OSs(found in FreeBSD) don't save cookies, so store and add them manually
 	Dict['Cookie'] = {'Cookie':cookies}
 
+	# Dewsmen 11/21/2014 Can't access cookie expire date, so will store response date that is 7 days less then expiration 
+	Dict['SESSION_STARTED'] = login['Date']
+
 #	if not LoggedIn():
 #		Response.Status = 401 #Unauthorized
 
 ####################################################################################################
 def LoggedIn():
+
+	# Dewsmen 11/21/2014 added session expiration control
+
+	#Dewsmen for old plugins without SESSION_STARTED force Login
+	if not 'SESSION_STARTED' in Dict:
+		return False
+
+	sessionStarted = Datetime.ParseDate(Dict['SESSION_STARTED'])
+	expDelta = Datetime.Delta(days = WATCHIS_SESSION_EXP)
+	expDate = sessionStarted + expDelta 
+	#if expiered force Login
+	if expDate < Datetime.Now():
+		return False
 
 	#Dewsmen on wrong login still getting 200 OK, the only way to test - compare cookies
 	match = re.match("(?=.*?username)(?=.*?group_id)(?=.*?password)(?=.*?uid)(?=.*?verification)(?=.*?PHPSESSID).*$", str(Dict['Cookie']))
