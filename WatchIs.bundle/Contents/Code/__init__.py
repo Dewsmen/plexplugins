@@ -215,7 +215,7 @@ def GetBookmarks(title, url, page=0, cacheTime=0):
 ####################################################################################################
 def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 
-	oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
+	oc = ObjectContainer(title2=uL(title), view_group='InfoList')
 
 	xml = XML.ElementFromURL(url, cacheTime=cacheTime, headers = Dict['Cookie'])
 
@@ -236,7 +236,6 @@ def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 		return errorOC, nextPage
 
 	results = {}
-
 	@parallelize
 	def GetAllVideos():
 		videos = xml.xpath('//catalog/item')
@@ -254,6 +253,9 @@ def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 					url = '%s/api/watch/%s' % (WATCHIS_URL, video_id)
 					posterUrl = '%s/posters/%s.jpg' % (WATCHIS_URL, video_id)
 
+					#11/22/2014 Dewsmen Cheat for service based on https://forums.plex.tv/index.php/topic/88220-data-api-available-in-service-code/
+					urlWithCookie = '%s#%s' %  (url, Dict['Cookie'])
+
 					descXml = XML.ElementFromURL(url, cacheTime=cacheTime, headers = Dict['Cookie'])
 					errorOC = CheckError(xml, '//item')
 					if errorOC:
@@ -263,7 +265,7 @@ def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 					desc = XML.ObjectFromString(descString)
 
 					results[num] = VideoClipObject(
-						url = url,
+						url = urlWithCookie,
 						title = unicode(str(item['title'])),
 						year = int(item['year']),
 						summary = str(desc['about']),

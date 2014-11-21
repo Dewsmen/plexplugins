@@ -7,19 +7,25 @@
 #
 ###################################################################################
 
+"""
+11/22/2014 Dewsmen 
+
+urlWithCookie looks like http://watch.is/api/watch/8618#{'Cookie': 'PHPSESSID=bcm0go17vucuidd1lqpqhmct96'}
+
+"""
 import traceback
 
 WATCHIS_URL = 'http://watch.is'
-WATCHIS_LOGIN = '%s/api/?username=%%s&password=%%s' % WATCHIS_URL
 
 ####################################################################################################
 def NormalizeURL(url):
     return url
 
 ####################################################################################################
-def MetadataObjectForURL(url):
+def MetadataObjectForURL(urlWithCookie):
+
     try:
-        desc = GetDescription(url)
+        desc = GetDescription(urlWithCookie)
         posterUrl = '%s/posters/%s.jpg' % (WATCHIS_URL, desc['id'])
 
         return VideoClipObject(
@@ -36,13 +42,14 @@ def MetadataObjectForURL(url):
         return VideoClipObject(
             title = '<error>',
             summary = '<An error occurred while fetching metadata>',
-        )
+       )
 
 ####################################################################################################
-def MediaObjectsForURL(url):
+def MediaObjectsForURL(urlWithCookie):
+    
     return [
         MediaObject(
-            parts = [PartObject(key=Callback(PlayVideo, url=url, format='hd', codecs='H264'))],
+            parts = [PartObject(key=Callback(PlayVideo, urlWithCookie=urlWithCookie, format='hd', codecs='H264'))],
             container = Container.MP4,
             video_codec = VideoCodec.H264,
             video_resolution = '720',
@@ -51,7 +58,7 @@ def MediaObjectsForURL(url):
             optimized_for_streaming = True
         ),
         MediaObject(
-            parts = [PartObject(key=Callback(PlayVideo, url=url, format='sd', codecs='H264'))],
+            parts = [PartObject(key=Callback(PlayVideo, urlWithCookie=urlWithCookie, format='sd', codecs='H264'))],
             container = Container.MP4,
             video_codec = VideoCodec.H264,
             video_resolution = '480',
@@ -61,8 +68,8 @@ def MediaObjectsForURL(url):
         )
     ]
 ####################################################################################################
-def GetVideoURL(url, format=None, codecs=None):
-    desc = GetDescription(url)
+def GetVideoURL(urlWithCookie, format=None, codecs=None):
+    desc = GetDescription(urlWithCookie)
     if format == 'hd':
         return str(desc['hdvideo'])
     
@@ -70,12 +77,13 @@ def GetVideoURL(url, format=None, codecs=None):
 
 ####################################################################################################
 @indirect
-def PlayVideo(url, format=None, codecs=None):
+def PlayVideo(urlWithCookie, format=None, codecs=None):
+
     try:
         try:
-            video_url = GetVideoURL(url, format, codecs)
+            video_url = GetVideoURL(urlWithCookie, format, codecs)
         except:
-            video_url = GetVideoURL(url, None, 'H264,VP8,VP6')
+            video_url = GetVideoURL(urlWithCookie, None, 'H264,VP8,VP6')
 
         if video_url is None:
             return None
@@ -90,19 +98,17 @@ def PlayVideo(url, format=None, codecs=None):
 PlayVideoIndirect = PlayVideo
 
 ####################################################################################################
-def GetDescription(url):
-    Login()
-    descXml = XML.ElementFromURL(url, cacheTime=CACHE_1WEEK)
-    CheckLoggedIn(descXml)
-    descString = XML.StringFromElement(descXml.xpath('//item')[0])
-    return XML.ObjectFromString(descString)
+def GetDescription(urlWithCookie):
+    url, cookie = parseUrlWithCookie(urlWithCookie)
 
-####################################################################################################
-def CheckLoggedIn(xml):
-    errorText = xml.xpath('//error/text()')
-    if errorText:
-        if errorText[0] == 'Access Denied':
-            raise Ex.MediaNotAuthorized
+    Log('url %s c %s' % (url, cookie))
+
+    try:
+        descXml = XML.ElementFromURL(url, cacheTime=CACHE_1WEEK, headers = cookie)
+        descString = XML.StringFromElement(descXml.xpath('//item')[0])
+    except Exception, e:
+        Log(e)
+    return XML.ObjectFromString(descString)
 
 ####################################################################################################
 def TimeToMs(timecode):
@@ -111,8 +117,6 @@ def TimeToMs(timecode):
     return seconds * 1000
 
 ####################################################################################################
-def Login():
-    Log(' --> Trying to log in')
-
-    url = WATCHIS_LOGIN % (Prefs['username'], Prefs['password'])
-    login = HTTP.Request(url).content
+def parseUrlWithCookie(url):
+    urlParts = url.split('#')
+    return (urlParts[0], JSON.ObjectFromString(urlParts[1]))

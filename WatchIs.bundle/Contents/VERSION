@@ -1,1 +1,6 @@
+2.5 (11/22/2014)
+	- Removed login from service part
 2.4 (11/21/2014)
+	- Check cookies expiration date
+2.3 (11/21/2014)
+	- Added search support 
