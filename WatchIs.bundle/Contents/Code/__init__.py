@@ -42,12 +42,21 @@ def Start():
 	InputDirectoryObject.art = R(ART)
 
 	HTTP.CacheTime = CACHE_1HOUR
+
+	#force login to be able manually refresh cookies
+	Login()
+
+
 ####################################################################################################
 def ValidatePrefs():
 	# Dewsmen 11/13/2014:in some case get error 'OSError: Directory is not empty'
 	try: 
 		HTTP.ClearCache()
 		HTTP.ClearCookies()
+
+		# Dewsmen 11/22/2014 Reset Dict with cookie and session_start
+		Dict.Reset()
+
 	except:
 		Log ("Can't clear cache, please clean it manually")
 ####################################################################################################
@@ -354,7 +363,7 @@ def LoggedIn():
 
 	# Dewsmen 11/21/2014 added session expiration control
 
-	#Dewsmen for old plugins without SESSION_STARTED force Login
+	# Dewsmen for old plugins without SESSION_STARTED force Login
 	if not 'SESSION_STARTED' in Dict:
 		return False
 
