@@ -181,7 +181,7 @@ def Search(query, title, url, page=0, cacheTime=1):
 @route('/video/watchis/genres', 'Genres')
 def Genres(title, url):
 
-	oc = ObjectContainer(title2=unicode(title), view_group='List')
+	oc = ObjectContainer(title2=uL(title), view_group='List')
 
 	# Dewsmen 11/13/2014: some OSs and browsers doesn't allow cookie, so add them manually
 	xml = XML.ElementFromURL(url, cacheTime=CACHE_1WEEK, headers = Dict['Cookie'])
@@ -196,11 +196,11 @@ def Genres(title, url):
 		genreString = XML.StringFromElement(genre_el)
 		genre = XML.ObjectFromString(genreString)
 		genre_id = int(genre['id'])
-		genre_title = unicode(str(genre['title']))
+		genre_title = uL(str(genre['title']))
 
 		oc.add(DirectoryObject(
-			key = Callback(GetVideos, title=genre_title, url=WATCHIS_VIDEOS, genre=genre_id),
-			title = genre_title
+			key = Callback(GetVideos, title=uL(genre_title), url=WATCHIS_VIDEOS, genre=genre_id),
+			title = uL(genre_title)
 		))
 
 	return oc
@@ -263,7 +263,7 @@ def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 					posterUrl = '%s/posters/%s.jpg' % (WATCHIS_URL, video_id)
 
 					#11/22/2014 Dewsmen Cheat for service based on https://forums.plex.tv/index.php/topic/88220-data-api-available-in-service-code/
-					urlWithCookie = '%s#%s' %  (url, Dict['Cookie'])
+#					urlWithCookie = '%s#%s' %  (url, Dict['Cookie'])
 
 					descXml = XML.ElementFromURL(url, cacheTime=cacheTime, headers = Dict['Cookie'])
 					errorOC = CheckError(xml, '//item')
@@ -274,8 +274,9 @@ def GetVideosUrl(title, url, cacheTime=CACHE_1HOUR):
 					desc = XML.ObjectFromString(descString)
 
 					results[num] = VideoClipObject(
-						url = urlWithCookie,
-						title = unicode(str(item['title'])),
+						#url = urlWithCookie,
+						url = url,
+						title = uL(str(item['title'])),
 						year = int(item['year']),
 						summary = str(desc['about']),
 						genres = [str(desc['genre'])],
@@ -313,7 +314,7 @@ def CheckError(xml, xpath):
 
 	# See if we have any creds stored
 	if not Prefs['username'] or not Prefs['password']:
-		return ObjectContainer(header=uL('Error'), message=unicode("Empty Prefs." + ". " + uL('Please enter your email and password in the preferences')))
+		return ObjectContainer(header=uL('Error'), message=uL("Empty Prefs.") + ". " + uL('Please enter your email and password in the preferences'))
 
 	#check response format
 	responseText = xml.xpath(xpath)
